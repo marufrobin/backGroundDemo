@@ -2,14 +2,12 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:ui';
 
-import 'package:cron/cron.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_background_service/flutter_background_service.dart';
 import 'package:flutter_background_service_android/flutter_background_service_android.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:location/location.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /*
@@ -17,135 +15,6 @@ Future<void> main() async {
   runApp(HomePage());
 }
 */
-
-class HomePage extends StatefulWidget {
-  const HomePage({Key? key}) : super(key: key);
-
-  @override
-  State<HomePage> createState() => _HomePageState();
-}
-
-class _HomePageState extends State<HomePage> {
-  Position? currentLocation;
-  _determinePosition() async {
-    bool serviceEnabled;
-    LocationPermission permission;
-
-    serviceEnabled = await Geolocator.isLocationServiceEnabled();
-
-    permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-      if (permission == LocationPermission.denied) {
-        return Future.error('Location permissions are denied');
-      }
-    }
-
-    if (permission == LocationPermission.deniedForever) {
-      // Permissions are denied forever, handle appropriately.
-      return Future.error(
-          'Location permissions are permanently denied, we cannot request permissions.');
-    }
-    currentLocation = await Geolocator.getCurrentPosition();
-    print(
-        "Current Postion ${currentLocation!.latitude}...........${currentLocation!.longitude}");
-  }
-
-  dynamic timeDate = [];
-  int index = 0;
-  Cron? cron;
-  getCoren() async {
-    cron = Cron();
-    try {
-      cron!.schedule(Schedule.parse('*/6 * * * * *'), () {
-        _determinePosition();
-        Geolocator.getPositionStream().listen((event) {
-          print("Current Contius location::$event");
-        });
-        print(index++);
-        setState(() {});
-      });
-    } on ScheduleParseException {
-      print("Exception :$ScheduleParseException");
-      // "ScheduleParseException" is thrown if cron parsing is failed.
-      await cron!.close();
-    }
-  }
-
-  @override
-  void initState() {
-    // _determinePosition();
-    // getCoren();
-    getLocation();
-    // TODO: implement initState
-    super.initState();
-  }
-
-  getLocation() async {
-    Location location = new Location();
-
-    bool _serviceEnabled;
-    PermissionStatus _permissionGranted;
-    LocationData _locationData;
-
-    _serviceEnabled = await location.serviceEnabled();
-    if (!_serviceEnabled) {
-      _serviceEnabled = await location.requestService();
-      if (!_serviceEnabled) {
-        return;
-      }
-    }
-
-    _permissionGranted = await location.hasPermission();
-    if (_permissionGranted == PermissionStatus.denied) {
-      _permissionGranted = await location.requestPermission();
-      if (_permissionGranted != PermissionStatus.granted) {
-        return;
-      }
-    }
-
-    _locationData = await location.getLocation();
-    location.enableBackgroundMode(enable: true).then((value) {
-      print("${value}");
-      print(_locationData);
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      home: Scaffold(
-        floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
-        floatingActionButton: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: [
-            FloatingActionButton.extended(
-              onPressed: () async {
-                getLocation();
-                print("Start");
-                // setState(() {});
-              },
-              label: Text("start"),
-            ),
-            FloatingActionButton.extended(
-              onPressed: () async {
-                await cron!.close();
-                print("Stop Service");
-              },
-              label: Text("Stop"),
-            ),
-          ],
-        ),
-        backgroundColor: Colors.blueGrey,
-        body: Center(
-          child: Container(
-            child: Text("${timeDate}"),
-          ),
-        ),
-      ),
-    );
-  }
-}
 
 Future<void> main() async {
   runApp(const MyApp());
